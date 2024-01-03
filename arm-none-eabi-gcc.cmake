@@ -44,6 +44,19 @@ set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
+# - set toolchain compiler init flags
+# 
+#   toolchain_set_flags_init(
+#       LANGUAGES C CXX ASM
+#       CPU cortex-m33+nodsp                                                    # example for cortex-m33 without DSP
+#       FLAGS -ffreestanding -fno-builtin -mfpu=fpv5-sp-d16 -mfloat-abi=hard    # some additional flags
+#       THUMB OPTIMIZE_CXX_NO_RTTI OPTIMIZE_CXX_NO_EXCEPTIONS
+#       OPTIMIZE_DATA_SECTIONS OPTIMIZE_FUNCTION_SECTIONS                       # some common used flags
+#   )
+#
+#
+# The toolchain_set_flags_init functions could be used to set compiler init flags.
+# Some options params contains the most common used flags.
 function(toolchain_set_flags_init)
     set(OPTIONS 
             THUMB 
@@ -63,7 +76,6 @@ function(toolchain_set_flags_init)
 
     set(ALLOWED_LANGUAGES C CXX ASM)
 
-    # message(STATUS "LANGUAGES: ${PARAM_LANGUAGES}")
     foreach(LANG ${PARAM_LANGUAGES})
         if(NOT (${LANG} IN_LIST ALLOWED_LANGUAGES))
             message(FATAL_ERROR "LANGUAGE ${LANG} should in C CXX ASM")
@@ -97,6 +109,9 @@ function(toolchain_set_flags_init)
 
         if(PARAM_CPU)
             set(FLAGS "${FLAGS} --mcpu=${PARAM_CPU}")
+        endif()
+        if(PARAM_FPU)
+            set(FLAGS "${FLAGS} --mfpu=${PARAM_FPU}")
         endif()
         
         set(CMAKE_${LANG}_FLAGS_INIT "${FLAGS}" PARENT_SCOPE)
