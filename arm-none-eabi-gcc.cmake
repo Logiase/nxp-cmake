@@ -63,10 +63,7 @@ function(toolchain_set_flags)
             OPTIMIZE_DATA_SECTIONS 
             OPTIMIZE_FUNCTION_SECTIONS 
             OPTIMIZE_CXX_NO_RTTI 
-            OPTIMIZE_CXX_NO_EXCEPTIONS 
-            SPEC_NOSYS 
-            SPEC_NONE 
-            SPEC_RDIMON)
+            OPTIMIZE_CXX_NO_EXCEPTIONS)
     set(ONE_VALUE_ARGS 
             CPU)
     set(MULTI_VALUE_ARGS 
@@ -101,16 +98,6 @@ function(toolchain_set_flags)
             set(FLAGS "${FLAGS} -fno-exceptions")
         endif()
 
-        if(PARAM_SPEC_NOSYS)
-            set(FLAGS "${FLAGS} --specs=nosys.specs")
-        endif()
-        if(PARAM_SPEC_NONE)
-            set(FLAGS "${FLAGS} --specs=none.specs")
-        endif()
-        if(PARAM_SPEC_RDIMON)
-            set(FLAGS "${FLAGS} --specs=rdimon.specs")
-        endif()
-
         if(PARAM_CPU)
             set(FLAGS "${FLAGS} -mcpu=${PARAM_CPU}")
         endif()
@@ -130,7 +117,10 @@ function(toolchain_set_linker_flags)
             FLAGS)
     cmake_parse_arguments(PARAM "${OPTIONS}" "" "${MULTI_VALUE_ARGS}" ${ARGN})
 
-    set(FLAGS ${PARAM_FLAGS})
+    set(FLAGS "")
+    foreach(P ${PARAM_FLAGS})
+        set(FLAGS "${FLAGS} ${P}")
+    endforeach()
     
     if(PARAM_GC_SECTIONS)
         set(FLAGS "${FLAGS} -Wl,--gc-sections")
