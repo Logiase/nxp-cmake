@@ -46,7 +46,7 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
 # - set toolchain compiler init flags
 # 
-#   toolchain_set_flags_init(
+#   toolchain_set_flags(
 #       LANGUAGES C CXX ASM
 #       CPU cortex-m33+nodsp                                                    # example for cortex-m33 without DSP
 #       FLAGS -ffreestanding -fno-builtin -mfpu=fpv5-sp-d16 -mfloat-abi=hard    # some additional flags
@@ -55,9 +55,9 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 #   )
 #
 #
-# The toolchain_set_flags_init functions could be used to set compiler init flags.
+# The toolchain_set_flags functions could be used to set compiler init flags.
 # Some options params contains the most common used flags.
-function(toolchain_set_flags_init)
+function(toolchain_set_flags)
     set(OPTIONS 
             THUMB 
             OPTIMIZE_DATA_SECTIONS 
@@ -80,12 +80,16 @@ function(toolchain_set_flags_init)
         if(NOT (${LANG} IN_LIST ALLOWED_LANGUAGES))
             message(FATAL_ERROR "LANGUAGE ${LANG} should in C CXX ASM")
         endif()
-        set(FLAGS ${PARAM_FLAGS})
+        set(FLAGS "")
+        foreach(P ${PARAM_FLAGS})
+            set(FLAGS "${FLAGS} ${P}")
+        endforeach()
+
         if(PARAM_THUMB)
             set(FLAGS "${FLAGS} -mthumb")
         endif()
         if(PARAM_OPTIMIZE_DATA_SECTIONS)
-            set(FLAGS "${FLAGS} -ffdata-sections")
+            set(FLAGS "${FLAGS} -fdata-sections")
         endif()
         if(PARAM_OPTIMIZE_FUNCTION_SECTIONS)
             set(FLAGS "${FLAGS} -ffunction-sections")
@@ -108,17 +112,17 @@ function(toolchain_set_flags_init)
         endif()
 
         if(PARAM_CPU)
-            set(FLAGS "${FLAGS} --mcpu=${PARAM_CPU}")
+            set(FLAGS "${FLAGS} -mcpu=${PARAM_CPU}")
         endif()
         if(PARAM_FPU)
             set(FLAGS "${FLAGS} --mfpu=${PARAM_FPU}")
         endif()
         
-        set(CMAKE_${LANG}_FLAGS_INIT "${FLAGS}" PARENT_SCOPE)
+        set(CMAKE_${LANG}_FLAGS "${FLAGS}" PARENT_SCOPE)
     endforeach()
 endfunction()
 
-function(toolchain_set_linker_flags_init)
+function(toolchain_set_linker_flags)
     set(OPTIONS
             GC_SECTIONS
             PRINT_MEMORY_USAGE)
@@ -135,5 +139,5 @@ function(toolchain_set_linker_flags_init)
         set(FLAGS "${FLAGS} -Wl,--print-memory-usage")
     endif()
 
-    set(CMAKE_EXE_LINKER_FLAGS_INIT "${FLAGS}" PARENT_SCOPE)
+    set(CMAKE_EXE_LINKER_FLAGS "${FLAGS}" PARENT_SCOPE)
 endfunction()
