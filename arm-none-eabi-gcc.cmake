@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.6)
 
+message(STATUS "setting arm-none-eabi-gcc")
+
 set(CMAKE_CROSSCOMPILING TRUE)
 set(CMAKE_SYSTEM_NAME Generic)
 set(CMAKE_SYSTEM_PROCESSOR ARM)
