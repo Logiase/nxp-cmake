@@ -1,6 +1,6 @@
-# Logiase's CMake Utils
+# NXP CMake
 
-A collection of cmake files for better embedded development
+A collection of cmake files for better embedded development on NXP MCU
 
 ## Introduction
 
