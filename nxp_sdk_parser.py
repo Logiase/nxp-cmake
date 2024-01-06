@@ -27,73 +27,77 @@ def main():
     if not len(xmlfile) == 1:
         print(f"SDK meta file not found in {args.sdk_root}", file=sys.stderr)
         exit(1)
+    xmlfile = xmlfile[0]
+
+    tree = ET.parse(xmlfile)
+    root = tree.getroot()
+    device = root.attrib["name"]
+    map = {}
+
+    comps = root.findall("./components/")
+    for comp in comps:
+        id = comp.attrib["id"]
+        if not id.startswith("platform.drivers."):
+            continue
+        id = id.removeprefix("platform.drivers.").removesuffix("." + device)
+
+        dependencies = []
+        deps = comp.findall("./dependencies/all/component_dependency")
+        for dep in deps:
+            dep_id = dep.attrib["value"]
+            if not dep_id.startswith("platform.drivers."):
+                continue
+            dependencies.append(
+                dep_id.removeprefix("platform.drivers.").removesuffix("." + device)
+            )
+        deps = comp.findall("./dependencies/component_dependency")
+        for dep in deps:
+            dep_id = dep.attrib["value"]
+            if not dep_id.startswith("platform.drivers."):
+                continue
+            dependencies.append(
+                dep_id.removeprefix("platform.drivers.").removesuffix("." + device)
+            )
+
+        sources = []
+        srcs = comp.findall("./source/")
+        for src in srcs:
+            fname = src.attrib["mask"]
+            if not fname.endswith(".c"):
+                continue
+            sources.append(fname)
+
+        map[id] = DriverMeta(id, dependencies, sources)
 
     required = args.drivers
     required = set(required)
+    fin = set()
+
+    for c in required:
+        if not c in map:
+            print(f"{c} not found, ignore it", file=sys.stderr)
+            continue
+        fin.add(c)
+
+    while True:
+        last_len = len(fin)
+        required.clear()
+        for c in fin:
+            if not c in map:
+                print(f"{c} not found, ignore it", file=sys.stderr)
+                continue
+            for dep in map[c].dependencies:
+                required.add(dep)
+        fin = fin.union(required)
+        if len(fin) == last_len:
+            break
+
+    driver_path = os.path.join(args.sdk_root, f"devices/{device}/drivers")
+    for c in fin:
+        d = map[c]
+        for f in d.srcs:
+            print(os.path.abspath(os.path.join(driver_path, f)))
 
 
 if __name__ == "__main__":
     main()
-
-
-required = ["flexio_mculcd_smartdma"]
-required = set(required)
-fin = set(required)
-
-tree = ET.parse("./test.xml")
-root = tree.getroot()
-device = root.attrib["name"]
-
-map = {}
-
-comps = root.findall("./components/")
-for comp in comps:
-    id = comp.attrib["id"]
-    if not id.startswith("platform.drivers."):
-        continue
-    id = id.removeprefix("platform.drivers.").removesuffix("." + device)
-
-    dependencies = []
-    deps = comp.findall("./dependencies/all/component_dependency")
-    for dep in deps:
-        dep_id = dep.attrib["value"]
-        if not dep_id.startswith("platform.drivers."):
-            continue
-        dependencies.append(
-            dep_id.removeprefix("platform.drivers.").removesuffix("." + device)
-        )
-    deps = comp.findall("./dependencies/component_dependency")
-    for dep in deps:
-        dep_id = dep.attrib["value"]
-        if not dep_id.startswith("platform.drivers."):
-            continue
-        dependencies.append(
-            dep_id.removeprefix("platform.drivers.").removesuffix("." + device)
-        )
-
-    sources = []
-    srcs = comp.findall("./source/")
-    for src in srcs:
-        fname = src.attrib["mask"]
-        if not fname.endswith(".c"):
-            continue
-        sources.append(fname)
-
-    map[id] = DriverMeta(id, dependencies, sources)
-
-
-while True:
-    last_len = len(fin)
-    required.clear()
-
-    for c in fin:
-        for dep in map[c].dependencies:
-            required.add(dep)
-    fin = fin.union(required)
-    print(f"required: {required}\n\rfin: {fin}")
-
-    if len(fin) == last_len:
-        break
-
-
-print(fin)
