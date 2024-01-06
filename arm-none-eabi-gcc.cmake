@@ -105,7 +105,7 @@ function(toolchain_set_flags)
             set(FLAGS "${FLAGS} --mfpu=${PARAM_FPU}")
         endif()
         
-        set(CMAKE_${LANG}_FLAGS "${FLAGS}" PARENT_SCOPE)
+        set(CMAKE_${LANG}_FLAGS "${CMAKE_${LANG}_FLAGS} ${FLAGS}" PARENT_SCOPE)
     endforeach()
 endfunction()
 
@@ -129,5 +129,5 @@ function(toolchain_set_linker_flags)
         set(FLAGS "${FLAGS} -Wl,--print-memory-usage")
     endif()
 
-    set(CMAKE_EXE_LINKER_FLAGS "${FLAGS}" PARENT_SCOPE)
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${FLAGS}" PARENT_SCOPE)
 endfunction()
