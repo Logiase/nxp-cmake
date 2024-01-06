@@ -15,11 +15,6 @@ endfunction()
 function(nxp_sdk_device_dir)
     set(ONE_VALUE_ARGS SDK_ROOT DEVICE VARIABLE)
     cmake_parse_arguments(PARAM "" "${ONE_VALUE_ARGS}" "" ${ARGN})
-
-    message(STATUS "SDK_ROOT: ${PARAM_SDK_ROOT}")
-    message(STATUS "DEVICE: ${PARAM_DEVICE}")
-    message(STATUS "VARIABLE: ${PARAM_VARIABLE}")
-
     if(NOT PARAM_VARIABLE)
         message(WARNING "VARIABLE not defined")
         return()
@@ -28,7 +23,6 @@ function(nxp_sdk_device_dir)
         message(FATAL_ERROR "SDK_ROOT not defined")
     endif()
 
-    
     if(PARAM_DEVICE)
         if(IS_DIRECTORY "${PARAM_SDK_ROOT}/devices/${PARAM_DEVICE}")
             set(${PARAM_VARIABLE} "${PARAM_SDK_ROOT}/devices/${PARAM_DEVICE}" PARENT_SCOPE)
