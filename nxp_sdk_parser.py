@@ -92,11 +92,13 @@ def main():
         if len(fin) == last_len:
             break
 
+    srcs = set()
     driver_path = os.path.join(args.sdk_root, f"devices/{device}/drivers")
     for c in fin:
         d = map[c]
         for f in d.srcs:
-            print(os.path.abspath(os.path.join(driver_path, f)))
+            srcs.add(os.path.abspath(os.path.join(driver_path, f)))
+    print(*srcs, sep=";")
 
 
 if __name__ == "__main__":
