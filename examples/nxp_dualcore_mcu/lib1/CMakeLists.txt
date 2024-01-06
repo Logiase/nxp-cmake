@@ -1,0 +1,10 @@
+target_sources(lib1
+    PRIVATE
+        lib1.c
+)
+target_include_directories(lib1
+    PRIVATE
+        .
+    PUBLIC 
+        include
+)
