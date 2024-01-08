@@ -30,6 +30,27 @@ function(nxp_sdk)
     set(${PARAM_OUTPUT} ${STDOUT_RESULT} PARENT_SCOPE)
 endfunction()
 
+function(nxp_sdk_sources)
+    set(ONE_VALUE_ARGS SDK_ROOT DEVICE OUTPUT)
+    set(MULTI_VALUE_ARGS DRIVERS)
+    cmake_parse_arguments(PARAM "" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
+
+    set(COMMAND ${Python3_EXECUTABLE} ${_NXP_SDK_PYTHON_SCRIPT_PATH} --sdk_root ${PARAM_SDK_ROOT})
+    if(PARAM_DEVICE)
+        set(COMMAND ${COMMAND} --device ${PARAM_DEVICE})
+    endif()
+    set(COMMAND ${COMMAND} sources ${PARAM_DRIVERS})
+
+    execute_process(
+        COMMAND ${COMMAND}
+        COMMAND_ECHO STDERR
+        OUTPUT_VARIABLE STDOUT_RESULT
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    string(STRIP "${STDOUT_RESULT}" STDOUT_RESULT)
+    set(${PARAM_OUTPUT} ${STDOUT_RESULT} PARENT_SCOPE)
+endfunction()
+
 function(nxp_sdk_device_dir)
     set(ONE_VALUE_ARGS SDK_ROOT DEVICE VARIABLE)
     cmake_parse_arguments(PARAM "" "${ONE_VALUE_ARGS}" "" ${ARGN})
