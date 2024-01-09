@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.20)
 
-set(NXP_SDK_ROOT "C:\\Users\\Logiase\\Documents\\MCUXpressoSDK\\MCXN947_2_13_1")
+set(NXP_SDK_ROOT "path/to/sdk")
 
 set(CMAKE_TOOLCHAIN_FILE "../../arm-none-eabi-gcc.cmake")
 
@@ -11,11 +11,17 @@ set(CMAKE_CXX_STANDARD_REQUIRED TRUE)
 
 project(nxp_dualcore_exmaple C CXX ASM)
 
-toolchain_set_flags(
-    LANGUAGES C CXX ASM
-    THUMB OPTIMIZE_DATA_SECTIONS OPTIMIZE_FUNCTION_SECTIONS OPTIMIZE_CXX_NO_EXCEPTIONS OPTIMIZE_CXX_NO_RTTI
-)
-toolchain_set_linker_flags(GC_SECTIONS PRINT_MEMORY_USAGE)
+# toolchain_set_flags(
+#     LANGUAGES C CXX ASM
+#     THUMB OPTIMIZE_DATA_SECTIONS OPTIMIZE_FUNCTION_SECTIONS OPTIMIZE_CXX_NO_EXCEPTIONS OPTIMIZE_CXX_NO_RTTI
+# )
+# toolchain_set_linker_flags(GC_SECTIONS PRINT_MEMORY_USAGE)
+
+# add_compile_options(-mthumb -fdata-sections -ffunction-sections $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti> $<$<COMPILE_LANGUAGE:CXX>:-fno-exceptions>)
+add_compile_options(-mthumb -fdata-sections -ffunction-sections -Wall -Wextra)
+list(APPEND CMAKE_CXX_FLAGS -fno-rtti -fno-exceptions)
+
+add_link_options(-Wl,--gc-sections -Wl,--print-memory-usage)
 
 include("../../nxp-sdk.cmake")
 nxp_sdk_device_dir(
