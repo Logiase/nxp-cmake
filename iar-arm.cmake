@@ -1,3 +1,6 @@
+# IAR Arm toolchain support
+# some code copy from https://github.com/IARSystems/cmake-tutorial
+
 message(STATUS "setting IAR")
 
 set(CMAKE_CROSSCOMPILING TRUE)
