@@ -36,26 +36,37 @@ find_program(CMAKE_ELFTOOL
 
 set(CMAKE_EXECUTABLE_SUFFIX .elf)
 
-function(toolchain_elf_to_hex TARGET)
+function(_toolchain_elf_to TARGET TO OUTPUT_EXT)
+    get_target_property(TARGET_OUTPUT_NAME ${TARGET} OUTPUT_NAME)
+    if(TARGET_OUTPUT_NAME)
+        set(OUTPUT_NAME "${TARGET_OUTPUT_NAME}.${OUTPUT_EXT}")
+    else()
+        set(OUTPUT_NAME "${TARGET}.${OUTPUT_EXT}")
+    endif()
+
+    get_target_property(RUNTIME_OUTPUT_DIRECTORY ${TARGET} RUNTIME_OUTPUT_DIRECTORY)
+    if(RUNTIME_OUTPUT_DIRECTORY)
+        set(OUTPUT_PATH "${RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}")
+    else()
+        set(OUTPUT_PATH "${OUTPUT_NAME}")
+    endif()
+
     add_custom_command(
         TARGET ${TARGET}
-        COMMAND ${CMAKE_ELFTOOL} --silent --ihex $<TARGET_FILE:${TARGET}> $<IF:$<BOOL:$<TARGET_PROPERTY:${TARGET}, OUTPUT_NAME>>, $<TARGET_PROPERTY:${TARGET}, OUTPUT_NAME>, $<TARGET_PROPERTY:${TARGET}, NAME>>.hex
         POST_BUILD
+        COMMAND ${CMAKE_ELFTOOL} --silent --${TO} "$<TARGET_FILE:${TARGET}>" ${OUTPUT_PATH}
+        BYPRODUCTS ${OUTPUT_PATH}
     )
+endfunction()
+
+function(toolchain_elf_to_hex TARGET)
+    _toolchain_elf_to(${TARGET} ihex hex)
 endfunction()
 
 function(toolchain_elf_to_bin TARGET)
-    add_custom_command(
-        TARGET ${TARGET}
-        COMMAND ${CMAKE_ELFTOOL} --silent --bin $<TARGET_FILE:${TARGET}> $<IF:$<BOOL:$<TARGET_PROPERTY:${TARGET}, OUTPUT_NAME>>, $<TARGET_PROPERTY:${TARGET}, OUTPUT_NAME>, $<TARGET_PROPERTY:${TARGET}, NAME>>.bin
-        POST_BUILD
-    )
+    _toolchain_elf_to(${TARGET} bin bin)
 endfunction()
 
-function(toolchain_elf_to_hex TARGET)
-    add_custom_command(
-        TARGET ${TARGET}
-        COMMAND ${CMAKE_ELFTOOL} --silent --srec $<TARGET_FILE:${TARGET}> $<IF:$<BOOL:$<TARGET_PROPERTY:${TARGET}, OUTPUT_NAME>>, $<TARGET_PROPERTY:${TARGET}, OUTPUT_NAME>, $<TARGET_PROPERTY:${TARGET}, NAME>>.srec
-        POST_BUILD
-    )
+function(toolchain_elf_to_srec TARGET)
+    _toolchain_elf_to(${TARGET} srec srec)
 endfunction()

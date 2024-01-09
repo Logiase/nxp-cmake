@@ -56,7 +56,6 @@ set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 #       OPTIMIZE_DATA_SECTIONS OPTIMIZE_FUNCTION_SECTIONS                       # some common used flags
 #   )
 #
-#
 # The toolchain_set_flags functions could be used to set compiler init flags.
 # Some options params contains the most common used flags.
 function(toolchain_set_flags)
@@ -132,4 +131,38 @@ function(toolchain_set_linker_flags)
     endif()
 
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${FLAGS}" PARENT_SCOPE)
+endfunction()
+
+function(_toolchain_elf_to TARGET TO OUTPUT_EXT)
+    get_target_property(TARGET_OUTPUT_NAME ${TARGET} OUTPUT_NAME)
+    if(TARGET_OUTPUT_NAME)
+        set(OUTPUT_NAME "${TARGET_OUTPUT_NAME}.${OUTPUT_EXT}")
+    else()
+        set(OUTPUT_NAME "${TARGET}.${OUTPUT_EXT}")
+    endif()
+
+    get_target_property(RUNTIME_OUTPUT_DIRECTORY ${TARGET} RUNTIME_OUTPUT_DIRECTORY)
+    if(RUNTIME_OUTPUT_DIRECTORY)
+        set(OUTPUT_PATH "${RUNTIME_OUTPUT_DIRECTORY}/${OUTPUT_NAME}")
+    else()
+        set(OUTPUT_PATH "${OUTPUT_NAME}")
+    endif()
+    add_custom_command(
+        TARGET ${TARGET}
+        POST_BUILD
+        COMMAND ${CMAKE_OBJCOPY} -O ihex "$<TARGET_FILE:${TARGET}>" ${OUTPUT_PATH}
+        BYPRODUCTS ${OUTPUT_PATH}
+    )
+endfunction()
+
+function(toolchain_elf_to_hex TARGET)
+    _toolchain_elf_to(${TARGET} "ihex" "hex")
+endfunction()
+
+function(toolchain_elf_to_bin TARGET)
+    _toolchain_elf_to(${TARGET} "binary" "bin")
+endfunction()
+
+function(toolchain_elf_to_srec TARGET)
+    _toolchain_elf_to(${TARGET} "srec" "srec")
 endfunction()
