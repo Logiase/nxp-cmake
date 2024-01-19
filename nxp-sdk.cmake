@@ -31,15 +31,92 @@ function(nxp_sdk)
 endfunction()
 
 function(nxp_sdk_sources)
-    set(ONE_VALUE_ARGS SDK_ROOT DEVICE OUTPUT)
+    set(OPTIONS CMSIS_SYSTEM)
+    set(ONE_VALUE_ARGS SDK_ROOT DEVICE PACKAGE CORE OUTPUT)
     set(MULTI_VALUE_ARGS DRIVERS)
-    cmake_parse_arguments(PARAM "" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
+    cmake_parse_arguments(PARAM "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
+
+    if(NOT PARAM_SDK_ROOT)
+        message(FATAL_ERROR "SDK_ROOT not defined")
+    endif()
 
     set(COMMAND ${Python3_EXECUTABLE} ${_NXP_SDK_PYTHON_SCRIPT_PATH} --sdk_root ${PARAM_SDK_ROOT})
     if(PARAM_DEVICE)
         set(COMMAND ${COMMAND} --device ${PARAM_DEVICE})
     endif()
+    if (PARAM_DEVICE)
+        set(COMMAND ${COMMAND} --core ${PARAM_CORE})
+    endif()
+    
     set(COMMAND ${COMMAND} sources ${PARAM_DRIVERS})
+    if(PARAM_CMSIS_SYSTEM)
+        set(COMMAND ${COMMAND} --cmsis)
+    endif()
+
+    execute_process(
+        COMMAND ${COMMAND}
+        COMMAND_ECHO STDERR
+        OUTPUT_VARIABLE STDOUT_RESULT
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    string(STRIP "${STDOUT_RESULT}" STDOUT_RESULT)
+    set(${PARAM_OUTPUT} ${STDOUT_RESULT} PARENT_SCOPE)
+endfunction()
+
+function(nxp_sdk_defines)
+    set(OPTIONS)
+    set(ONE_VALUE_ARGS SDK_ROOT DEVICE PACKAGE CORE OUTPUT)
+    set(MULTI_VALUE_ARGS)
+    cmake_parse_arguments(PARAM "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
+    if(NOT PARAM_SDK_ROOT)
+        message(FATAL_ERROR "SDK_ROOT not defined")
+    endif()
+    
+    set(COMMAND ${Python3_EXECUTABLE} ${_NXP_SDK_PYTHON_SCRIPT_PATH} --sdk_root ${PARAM_SDK_ROOT})
+    if(PARAM_DEVICE)
+        set(COMMAND ${COMMAND} --device ${PARAM_DEVICE})
+    endif()
+    if(PARAM_PACKAGE)
+        set(COMMAND ${COMMAND} --package ${PARAM_PACKAGE})
+    endif()
+    if(PARAM_CORE)
+        set(COMMAND ${COMMAND} --core ${PARAM_CORE})
+    endif()
+    set(COMMAND ${COMMAND} defines)
+
+    execute_process(
+        COMMAND ${COMMAND}
+        COMMAND_ECHO STDERR
+        OUTPUT_VARIABLE STDOUT_RESULT
+        COMMAND_ERROR_IS_FATAL ANY
+    )
+    string(STRIP "${STDOUT_RESULT}" STDOUT_RESULT)
+    set(${PARAM_OUTPUT} ${STDOUT_RESULT} PARENT_SCOPE)
+endfunction()
+
+function(nxp_sdk_includes)
+    set(OPTIONS CMSIS)
+    set(ONE_VALUE_ARGS SDK_ROOT DEVICE PACKAGE CORE OUTPUT)
+    set(MULTI_VALUE_ARGS)
+    cmake_parse_arguments(PARAM "${OPTIONS}" "${ONE_VALUE_ARGS}" "${MULTI_VALUE_ARGS}" ${ARGN})
+    if(NOT PARAM_SDK_ROOT)
+        message(FATAL_ERROR "SDK_ROOT not defined")
+    endif()
+    
+    set(COMMAND ${Python3_EXECUTABLE} ${_NXP_SDK_PYTHON_SCRIPT_PATH} --sdk_root ${PARAM_SDK_ROOT})
+    if(PARAM_DEVICE)
+        set(COMMAND ${COMMAND} --device ${PARAM_DEVICE})
+    endif()
+    if(PARAM_PACKAGE)
+        set(COMMAND ${COMMAND} --package ${PARAM_PACKAGE})
+    endif()
+    if(PARAM_CORE)
+        set(COMMAND ${COMMAND} --core ${PARAM_CORE})
+    endif()
+    set(COMMAND ${COMMAND} includes)
+    if(PARAM_CMSIS)
+        set(COMMAND ${COMMAND} --cmsis)
+    endif()
 
     execute_process(
         COMMAND ${COMMAND}

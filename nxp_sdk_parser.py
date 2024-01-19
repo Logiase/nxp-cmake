@@ -9,11 +9,9 @@ from xml.etree import ElementTree as ET
 driver_regex = r"platform\.(drivers|devices)\.(.*?(?=\.))\.(.*)"
 
 
-class DriverMeta(object):
-    def __init__(self, id, dependencies: List[str], srcs: List[str]):
-        self.id = id
-        self.dependencies = dependencies
-        self.srcs = srcs
+class ReturnReason:
+    ArgsError = 1
+    NotImplemented = 2
 
 
 class Driver(object):
@@ -52,19 +50,28 @@ class Driver(object):
 
         return cls(name, dependencies, srcs)
 
+    def __repr__(self) -> str:
+        return f"{self.name} dep {self.dependencies}"
+
 
 class Core(object):
-    def __init__(self, name: str, fpu: bool, dsp: bool):
+    def __init__(self, name: str, type: str, fpu: bool, dsp: bool):
         self.name = name
+        self.type = type
         self.fpu = fpu
         self.dsp = dsp
 
     @classmethod
     def parse(cls, node: ET.Element):
         name = node.attrib["name"]
+        type = node.attrib["type"]
         fpu = True if node.attrib["fpu"] == "true" else False
         dsp = True if node.attrib["dsp"] == "true" else False
-        return cls(name, fpu, dsp)
+        return cls(name, type, fpu, dsp)
+
+    def __repr__(self) -> str:
+        type_regex = r""
+        s = f"{self.name}: {self.type}"
 
 
 class Device(object):
@@ -82,19 +89,38 @@ class Device(object):
         self.defines = defines
         self.drivers = drivers
 
-    def get_defines(self, package: str, core: str) -> List[str]:
-        if package not in self.packages:
-            raise ValueError()
-        cores = [c.name for c in self.cores]
-        if core not in cores:
-            raise ValueError()
+    def get_defines(self, package: str | None, core: str | None) -> List[str]:
+        if not self.package_exists(package):
+            raise ValueError(
+                f"{package} not found, avaliable packages: ${self.packages}"
+            )
+        if package is None:
+            package = self.packages[0]
+        core = self.get_core(core)
 
         defines = []
         for d in self.defines:
             defines.append(
-                d.replace("$|package|", package).replace("$|core_name|", core)
+                d.replace("$|package|", package)
+                .replace("$|core_name|", core.name)
+                .replace("$|core|", core.type)
             )
         return defines
+
+    def package_exists(self, package: str | None) -> bool:
+        if package is None and len(self.packages) == 1:
+            return True
+        if package in self.packages:
+            return True
+        return False
+
+    def get_core(self, core: str | None) -> Core:
+        if core is None and len(self.cores) == 1:
+            return self.cores[0]
+        cores = [c.name for c in self.cores]
+        if not core in cores:
+            raise KeyError(f"{core} not found, avaliable cores: {cores}")
+        return self.cores[cores.index(core)]
 
     def append_driver(self, driver: Driver):
         self.drivers.append(driver)
@@ -107,7 +133,7 @@ class SDK(object):
     def __init__(self, devices: dict[str, Device]):
         self.devices = devices
 
-    def get_device(self, name):
+    def get_device(self, name: str | None):
         if name is None and len(self.devices) == 1:
             return self.devices[list(self.devices.keys())[0]]
         if name not in self.devices:
@@ -152,12 +178,21 @@ class SDK(object):
 
 def get_sources(args):
     sdk = SDK.parse(args.sdk_root)
-    if args.device is None:
-        if len(sdk.devices) != 1:
-            raise ValueError("SDK contains more than 1 devices, please specific one")
-        device = sdk.get_device(None)
-    else:
-        device = sdk.get_device(args.device)
+    device = sdk.get_device(args.device)
+    srcs = set()
+
+    if args.cmsis:
+        core = device.get_core(args.core)
+        srcs.add(
+            os.path.abspath(
+                os.path.join(
+                    args.sdk_root,
+                    "devices",
+                    device.name,
+                    f"system_{device.name}_{core.name}.c",
+                )
+            )
+        )
 
     required = args.drivers
     required = set(required)
@@ -179,7 +214,6 @@ def get_sources(args):
         if len(fin) == last_len:
             break
 
-    srcs = set()
     for c in fin:
         driver = device.drivers[c]
         for f in driver.srcs:
@@ -188,49 +222,96 @@ def get_sources(args):
 
 
 def get_defines(args):
-    print("defines")
+    sdk = SDK.parse(args.sdk_root)
+    device = sdk.get_device(args.device)
+    defines = device.get_defines(args.package, args.core)
+    print(*defines, sep=";")
 
 
 def get_includes(args):
-    print("includes")
+    sdk = SDK.parse(args.sdk_root)
+    device = sdk.get_device(args.device)
+
+    includes = [
+        os.path.abspath(os.path.join(args.sdk_root, "devices", device.name)),
+        os.path.abspath(os.path.join(args.sdk_root, "devices", device.name, "drivers")),
+    ]
+    if args.cmsis:
+        includes.append(
+            os.path.abspath(os.path.join(args.sdk_root, "CMSIS", "Core", "Include"))
+        )
+
+    print(*includes, sep=";")
 
 
 def print_list(args):
-    print("list")
+    sdk = SDK.parse(args.sdk_root)
+    avaliable_targets = ["drivers", "devices", "packages", "cores"]
+    if not args.target in avaliable_targets:
+        print("targets should in `drivers`, `devices`, `packages`, `cores`")
+        exit(ReturnReason.ArgsError)
 
 
-def parse_args():
+def get_parser():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument("--sdk_root", required=True)
-    subparsers = parser.add_subparsers(title="subcommands")
+    parser.add_argument("--sdk_root", required=True, help="SDK root dir")
+    parser.add_argument(
+        "--device",
+        required=False,
+        help="selected device, print all avaliable values with `list devices`",
+    )
+    parser.add_argument(
+        "--package",
+        required=False,
+        help="selected package, print all avaliable values with `list packages`",
+    )
+    parser.add_argument(
+        "--core",
+        required=False,
+        help="selected core, print all avaliable values with `list cores`",
+    )
+    subparsers = parser.add_subparsers(title="subcommands", help="all subcommands")
 
-    parser_sources = subparsers.add_parser("sources")
-    parser_sources.add_argument("--device")
-    parser_sources.add_argument("drivers", nargs="+")
+    parser_sources = subparsers.add_parser(
+        "sources", help="print selected sources with `;` seperated"
+    )
+    parser_sources.add_argument(
+        "--cmsis", action="store_true", help="add CMSIS system source"
+    )
+    parser_sources.add_argument("drivers", nargs="+", help="selected drivers")
     parser_sources.set_defaults(func=get_sources)
 
-    parser_defines = subparsers.add_parser("defines")
-    parser_defines.add_argument("--device")
+    parser_defines = subparsers.add_parser(
+        "defines", help="print defines with selected device and package"
+    )
     parser_defines.set_defaults(func=get_defines)
 
-    parser_includes = subparsers.add_parser("includes")
-    parser_includes.add_argument("--device")
-    parser_includes.add_argument("--cmsis", action="store_true")
+    parser_includes = subparsers.add_parser(
+        "includes", help="print include directories for SDK"
+    )
+    parser_includes.add_argument(
+        "--cmsis", action="store_true", help="include SDK's CMSIS"
+    )
     parser_includes.set_defaults(func=get_includes)
 
-    parser_list_deviec = subparsers.add_parser("list_device")
-    parser_list_deviec.set_defaults(func=print_list)
-    parser_list_drivers = subparsers.add_parser("list_drivers")
-    parser_list_drivers.set_defaults(func=print_list)
+    parser_list = subparsers.add_parser("list", help="print avaliable informations")
+    parser_list.add_argument(
+        "target", help="avaliable values: drivers, devices, packages, cores"
+    )
+    parser_list.set_defaults(func=print_list)
 
-    return parser.parse_args()
+    return parser
 
 
 def main():
-    args = parse_args()
+    parser = get_parser()
+    args = parser.parse_args()
+    if not "func" in args:
+        print("sdk_root not defined")
+        parser.print_help()
+        exit(ReturnReason.ArgsError)
     args.func(args)
-    return
 
 
 if __name__ == "__main__":
