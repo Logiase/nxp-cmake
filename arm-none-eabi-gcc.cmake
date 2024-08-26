@@ -51,3 +51,21 @@ set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
 
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR})
+
+function(generate_hex TARGET)
+    add_custom_command(
+            TARGET ${TARGET}
+            POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMAND ${CMAKE_OBJCOPY} ARGS -O ihex $<TARGET_FILE:${TARGET}> $<TARGET_NAME:${TARGET}>.hex
+    )
+endfunction()
+
+function(generate_bin TARGET)
+    add_custom_command(
+            TARGET ${TARGET}
+            POST_BUILD
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+            COMMAND ${CMAKE_OBJCOPY} ARGS -O binary $<TARGET_FILE:${TARGET}> $<TARGET_NAME:${TARGET}>.bin
+    )
+endfunction()
